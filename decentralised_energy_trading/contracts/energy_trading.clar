@@ -47,3 +47,43 @@
     (map-set consumers tx-sender { energy-consumed: u0, total-spent: u0 })
     (print {event: "consumer-registered", consumer: tx-sender})
     (ok true)))
+
+(define-public (buy-energy (producer principal) (energy-amount uint))
+  (let (
+    (producer-data (unwrap! (map-get? producers producer) (err err-producer-not-found)))
+    (energy-available (get energy-available producer-data))
+    (energy-price (get energy-price producer-data))
+    (total-cost (* energy-amount energy-price))
+    (consumer-data (default-to { energy-consumed: u0, total-spent: u0 } (map-get? consumers tx-sender)))
+  )
+    (asserts! (>= energy-available energy-amount) (err err-insufficient-energy))
+    (asserts! (>= (stx-get-balance tx-sender) total-cost) (err err-insufficient-funds))
+    
+    ;; Perform STX transfer
+    (match (stx-transfer? total-cost tx-sender producer)
+      success
+        (begin
+          ;; Update producer
+          (map-set producers producer 
+            { energy-available: (- energy-available energy-amount), energy-price: energy-price })
+          
+          ;; Update consumer
+          (map-set consumers tx-sender 
+            {
+              energy-consumed: (+ (get energy-consumed consumer-data) energy-amount),
+              total-spent: (+ (get total-spent consumer-data) total-cost)
+            })
+          
+          ;; Update energy sold and purchased
+          (map-set energy-sold producer 
+            (+ (default-to u0 (map-get? energy-sold producer)) energy-amount))
+          (map-set energy-purchased tx-sender 
+            (+ (default-to u0 (map-get? energy-purchased tx-sender)) energy-amount))
+          
+          (print {event: "energy-purchased", producer: producer, consumer: tx-sender, amount: energy-amount, cost: total-cost})
+          (ok true)
+        )
+      error (err err-stx-transfer-failed)
+    )
+  )
+)
