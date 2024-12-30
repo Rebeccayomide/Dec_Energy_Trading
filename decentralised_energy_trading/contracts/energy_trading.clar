@@ -31,3 +31,19 @@
 
 (define-read-only (get-energy-purchased (consumer principal))
   (ok (default-to u0 (map-get? energy-purchased consumer))))
+
+;; Public functions
+(define-public (register-producer (energy-amount uint) (price-per-unit uint))
+  (begin
+    (asserts! (> energy-amount u0) (err err-invalid-amount))
+    (asserts! (> price-per-unit u0) (err err-invalid-amount))
+    (map-set producers tx-sender 
+      { energy-available: energy-amount, energy-price: price-per-unit })
+    (print {event: "producer-registered", producer: tx-sender, energy: energy-amount, price: price-per-unit})
+    (ok true)))
+
+(define-public (register-consumer)
+  (begin
+    (map-set consumers tx-sender { energy-consumed: u0, total-spent: u0 })
+    (print {event: "consumer-registered", consumer: tx-sender})
+    (ok true)))
