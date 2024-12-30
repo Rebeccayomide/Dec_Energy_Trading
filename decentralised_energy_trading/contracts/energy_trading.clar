@@ -14,3 +14,20 @@
 (define-constant err-insufficient-energy (err u103))
 (define-constant err-insufficient-funds (err u104))
 (define-constant err-stx-transfer-failed (err u105))
+
+;; Read-only functions
+(define-read-only (get-producer-info (producer principal))
+  (ok (default-to 
+    { energy-available: u0, energy-price: u0 } 
+    (map-get? producers producer))))
+
+(define-read-only (get-consumer-info (consumer principal))
+  (ok (default-to 
+    { energy-consumed: u0, total-spent: u0 } 
+    (map-get? consumers consumer))))
+
+(define-read-only (get-energy-sold (producer principal))
+  (ok (default-to u0 (map-get? energy-sold producer))))
+
+(define-read-only (get-energy-purchased (consumer principal))
+  (ok (default-to u0 (map-get? energy-purchased consumer))))
